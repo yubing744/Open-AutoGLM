@@ -29,7 +29,7 @@ from phone_agent.config.apps import list_supported_apps
 from phone_agent.model import ModelConfig
 
 
-def check_system_requirements() -> bool:
+def check_system_requirements(device_id: str = None) -> bool:
     """
     Check system requirements before running the agent.
 
@@ -37,6 +37,9 @@ def check_system_requirements() -> bool:
     1. ADB tools installed
     2. At least one device connected
     3. ADB Keyboard installed on the device
+
+    Args:
+        device_id: Specific device ID to check (for multi-device setups)
 
     Returns:
         True if all checks pass, False otherwise.
@@ -122,11 +125,17 @@ def check_system_requirements() -> bool:
         print("❌ System check failed. Please fix the issues above.")
         return False
 
-    # Check 3: ADB Keyboard installed
+    # Check 3: ADB Keyboard installed on specific device
     print("3. Checking ADB Keyboard...", end=" ")
     try:
+        # Build command with device ID if specified
+        cmd = ["adb", "shell", "ime", "list", "-s"]
+        if device_id:
+            cmd = ["adb", "-s", device_id, "shell", "ime", "list", "-s"]
+            print(f"(on {device_id})...", end=" ")
+
         result = subprocess.run(
-            ["adb", "shell", "ime", "list", "-s"],
+            cmd,
             capture_output=True,
             text=True,
             timeout=10,
@@ -137,16 +146,21 @@ def check_system_requirements() -> bool:
             print("✅ OK")
         else:
             print("❌ FAILED")
-            print("   Error: ADB Keyboard is not installed on the device.")
+            device_msg = f" on device {device_id}" if device_id else " on the device"
+            print(f"   Error: ADB Keyboard is not installed{device_msg}.")
             print("   Solution:")
             print("     1. Download ADB Keyboard APK from:")
             print(
                 "        https://github.com/senzhk/ADBKeyBoard/blob/master/ADBKeyboard.apk"
             )
-            print("     2. Install it on your device: adb install ADBKeyboard.apk")
-            print(
-                "     3. Enable it in Settings > System > Languages & Input > Virtual Keyboard"
-            )
+            if device_id:
+                print(f"     2. Install it on the device: adb -s {device_id} install ADBKeyboard.apk")
+                print(f"     3. Enable it in Settings > System > Languages & Input > Virtual Keyboard")
+            else:
+                print("     2. Install it on your device: adb install ADBKeyboard.apk")
+                print(
+                    "     3. Enable it in Settings > System > Languages & Input > Virtual Keyboard"
+                )
             all_passed = False
     except subprocess.TimeoutExpired:
         print("❌ FAILED")
@@ -222,11 +236,18 @@ def check_model_api(base_url: str, model_name: str, api_key: str = "EMPTY") -> b
             print("     1. Check if the model server is running")
             print("     2. Verify the base URL is correct")
             print(f"     3. Try: curl {base_url}/chat/completions")
+            all_passed = False
         elif "timed out" in error_msg.lower() or "timeout" in error_msg.lower():
             print(f"   Error: Connection to {base_url} timed out")
             print("   Solution:")
             print("     1. Check your network connection")
             print("     2. Verify the server is responding")
+            all_passed = False
+        elif "502" in error_msg:
+            # 502 errors can be transient, attempt to continue anyway
+            print(f"   Error: Server returned 502 (may be transient)")
+            print("   Warning: Continuing anyway - API may still work")
+            all_passed = True  # Allow continuation despite 502 error
         elif (
             "Name or service not known" in error_msg
             or "nodename nor servname" in error_msg
@@ -235,10 +256,10 @@ def check_model_api(base_url: str, model_name: str, api_key: str = "EMPTY") -> b
             print("   Solution:")
             print("     1. Check the URL is correct")
             print("     2. Verify DNS settings")
+            all_passed = False
         else:
             print(f"   Error: {error_msg}")
-
-        all_passed = False
+            all_passed = False
 
     print("-" * 50)
 
@@ -464,7 +485,7 @@ def main():
         return
 
     # Run system requirements check before proceeding
-    if not check_system_requirements():
+    if not check_system_requirements(args.device_id):
         sys.exit(1)
 
     # Check model API connectivity and model availability

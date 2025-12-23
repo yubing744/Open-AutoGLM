@@ -1,0 +1,38 @@
+{
+  "total": 6,
+  "passed": 6,
+  "failed": 0,
+  "success_rate": 100.0,
+  "results": [
+    {
+      "test": "ADB Connection",
+      "status": "PASS",
+      "details": "Found devices: ['127.0.0.1:5555', 'emulator-5554']"
+    },
+    {
+      "test": "Environment Variables",
+      "status": "PASS",
+      "details": "Required: OK, Optional set: 3"
+    },
+    {
+      "test": "OpenAutoGLM Help",
+      "status": "PASS",
+      "details": "Help command works"
+    },
+    {
+      "test": "App List",
+      "status": "PASS",
+      "details": "Found 168 supported apps"
+    },
+    {
+      "test": "Device List",
+      "status": "PASS",
+      "details": "Connected devices:\n------------------------------------------------------------\n  \u2713 127.0.0.1:5555                 [remote] (SM_G998B)\n  \u2713 emulator-5554                  [usb] (SM_G998B)"
+    },
+    {
+      "test": "Mock Task Execution",
+      "status": "PASS",
+      "details": "Command execution works"
+    }
+  ]
+}
